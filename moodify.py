@@ -4,11 +4,11 @@ from spotipy.oauth2 import SpotifyOAuth
 import time
 
 app = Flask(__name__)
-app.secret_key = "super_secret_key"  # change this to anything random
+app.secret_key = "super_secret_key"  # random stuff, no need to care
 
 # Spotify API credentials
 CLIENT_ID = "b36bdb19978d4feb90e3371816f48ede"
-CLIENT_SECRET = "9d31eaef55f1431fb2a8f93ee6fefb5e"  # <- put your real secret here
+CLIENT_SECRET = "CHANGE HERE"  # <- real key put here
 REDIRECT_URI = "http://127.0.0.1:5000/callback"
 
 # Scope: permission we need

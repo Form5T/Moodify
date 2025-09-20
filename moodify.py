@@ -14,6 +14,17 @@ REDIRECT_URI = "http://127.0.0.1:5000/callback"
 # Scope: permission we need
 SCOPE = "user-read-private"
 
+playlist_map = {
+    "English": {
+        "happy": "https://open.spotify.com/playlist/0RH319xCjeU8VyTSqCF6M4?si=S9EcINgwTbKCdFlMHgvM7w",
+        "chill": "https://open.spotify.com/playlist/2yrMAJe8pqWk3n7l4VYLMk?si=-RvPLBmFQqylQPLTuujNjQ",
+        "sad": "https://open.spotify.com/playlist/4bRQf8bwAIVgCb6Lcoursx?si=fQcB_2trR_GkcTY3leSV-A",
+        "love": "https://open.spotify.com/playlist/6oNsYDhN95gkENsdFcAwTh?si=Yolvf9P0TB26R7Xv9frCoQ",
+        "study": "https://open.spotify.com/playlist/0oPyDVNdgcPFAWmOYSK7O1?si=XiC-GeuHTwm11E-NNCrg6Q",
+        "motivational": "https://open.spotify.com/playlist/2fmxVDpboTzLaLAfj5ZaQW?si=aXj9MgsoS3a_s8zEtW_FDg"
+    }
+}
+
 # Helper to get valid token
 def get_token():
     token_info = session.get("token_info", None)
@@ -37,14 +48,23 @@ def index():
     token_info = get_token()
     if not token_info:
         return redirect(url_for("login"))
-    return '''
-        <h2>Moodify 🎵</h2>
-        <p>Search songs by mood or keyword:</p>
+
+    # Mood playlists
+    html = "<h1>Moodify 🎵</h1>"
+    html += "<h2>🎶 Mood Playlists</h2>"
+    for mood, link in playlist_map["English"].items():
+        html += f"<h4>{mood.capitalize()}</h4>"
+        html += f'<a href="{link}" target="_blank">{mood.capitalize()} Playlist</a><br><br>'
+
+    # Spotify search form
+    html += """
+        <h2>🔍 Search Songs</h2>
         <form action="/search">
             <input type="text" name="query" placeholder="Happy, Sad, Chill..." required>
             <input type="submit" value="Search">
         </form>
-    '''
+    """
+    return html
 
 # Login with Spotify
 @app.route("/login")
@@ -74,13 +94,15 @@ def search():
     if not query:
         return "Please enter a search term."
 
-    results = sp.search(q=query, limit=5, type="track")
+    results = sp.search(q=query, limit=10, type="track")
     output = f"<h2>Results for '{query}'</h2>"
     for track in results["tracks"]["items"]:
         name = track["name"]
         artist = track["artists"][0]["name"]
         url = track["external_urls"]["spotify"]
         output += f"<p>{name} - {artist} (<a href='{url}' target='_blank'>Open in Spotify</a>)</p>"
+    
+    output += "<br><a href='/'>Back to Moodify</a>"
     return output
 
 if __name__ == "__main__":

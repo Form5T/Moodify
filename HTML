@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mootify</title>
+  <style>
+    :root{
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --muted: #6b7280;
+      --accent: #9ca3af; /* default gray accent */
+      --glass: rgba(255,255,255,0.6);
+      --text: #111827;
+      --tile-radius: 12;
+    }
+    *{box-sizing:border-box}
+    body{font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; margin:0; background:linear-gradient(180deg,var(--bg),#efefef); color:var(--text); min-height:100vh;}
+    /* Page wrapper */
+    .app{max-width:1200px;margin:28px auto;padding:18px}
+
+    /* Simple header with left circle and search */
+    .header{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+    .left-circle{width:42px;height:42px;border-radius:50%;background:var(--card);display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,0.08);cursor:pointer}
+    .left-circle img{width:30px;height:30px;border-radius:50%}
+    .search-wrap{flex:1;position:relative}
+    .search-input{width:100%;padding:10px 14px;border-radius:999px;border:1px solid rgba(0,0,0,0.06);backdrop-filter:blur(4px);background:rgba(255,255,255,0.6)}
+
+    /* Search results dropdown */
+    .results{position:absolute;left:0;right:0;top:46px;background:var(--card);border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,0.08);max-height:260px;overflow:auto;padding:8px;border:1px solid rgba(0,0,0,0.04)}
+    .result-item{padding:8px;border-radius:8px;display:flex;gap:10px;align-items:center}
+    .result-item:hover{background:linear-gradient(90deg, rgba(0,0,0,0.02), rgba(0,0,0,0.01))}
+    .result-item .title{font-weight:600}
+    .no-results{padding:16px;text-align:center;color:var(--muted)}
+
+    /* Grid of categories/tiles */
+    .grid{display:grid;gap:12px}
+    .tile{
+      padding: 16px;
+      border-radius: 16px;
+      min-height: 100px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      cursor:pointer;
+
+      background: linear-gradient(145deg, var(--tile-bg), rgba(255,255,255,0.9));
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1), 0 8px 20px rgba(0,0,0,0.08);
+      transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+    }
+
+    .tile:hover{
+      transform: translateY(-6px) scale(1.03);
+      box-shadow: 0 12px 28px rgba(0,0,0,0.2), 0 6px 16px rgba(0,0,0,0.15);
+      background: linear-gradient(145deg, var(--tile-bg), rgba(255,255,255,1));
+    }
+    .tile h4 {
+      margin: 0;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 6px; /* 文字和 emoji 间距 */
+    }
+    
+    /* Simple footer / small controls */
+    .controls{display:flex;gap:12px;align-items:center;margin-top:16px}
+    .btn{padding:8px 12px;border-radius:10px;border:0;background:var(--card);box-shadow:0 4px 12px rgba(0,0,0,0.04);cursor:pointer}
+
+    /* Modal / left circle panel */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,0.3);display:none;align-items:center;justify-content:center}
+    .panel{width:320px;background:var(--card);border-radius:14px;padding:16px;box-shadow:0 20px 50px rgba(0,0,0,0.2)}
+    .panel h3{margin-top:0}
+    .theme-list{display:flex;flex-wrap:wrap;gap:8px}
+    .theme-dot{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;cursor:pointer}
+    .small{font-size:13px;color:var(--muted)}
+
+    /* First page (username + display size) center box */
+    .center-page{min-height:70vh;display:flex;align-items:center;justify-content:center}
+    .card{background:var(--card);padding:20px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,0.06);width:380px}
+    .field{margin-bottom:12px}
+    label{display:block;font-size:13px;margin-bottom:6px}
+    input[type="text"]{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(0,0,0,0.06)}
+    .radios{display:flex;gap:8px}
+    .radio{padding:8px 12px;border-radius:999px;border:1px solid rgba(0,0,0,0.06);cursor:pointer}
+
+    /* small responsiveness for very small screens */
+    @media (max-width:440px){.card{width:92vw}}
+
+    /* Background image support */
+    .upload-label{display:inline-block;margin-top:8px;font-size:13px;color:var(--muted)}
+
+    /* Song list specific styles */
+    .song-list-container {
+      margin-top: 20px;
+    }
+    .song-list-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .song-list-header h3 {
+      margin: 0;
+      font-size: 1.5em;
+    }
+    .song-item {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      padding: 10px;
+      margin-bottom: 8px;
+      background: var(--card);
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    }
+    .song-item:hover {
+      background: rgba(var(--accent-rgb), 0.05); /* slightly tinted background on hover */
+    }
+    .song-item-cover {
+      width: 50px;
+      height: 50px;
+      border-radius: 6px;
+      background: linear-gradient(45deg, var(--accent), var(--muted));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 0.9em;
+      flex-shrink: 0;
+    }
+    .song-item-details {
+      flex-grow: 1;
+    }
+    .song-item-details .song-title {
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .song-item-details .song-artist {
+      font-size: 0.85em;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <!-- Two pages: page1 for input, page2 for main UI -->
+  <div id="page1" class="center-page">
+    <div class="card">
+      <h2>Enter your username</h2>
+      <div class="field">
+        <label for="usernameInp">Username</label>
+        <input id="usernameInp" type="text" placeholder="e.g. Angel" />
+      </div>
+      <div class="field">
+        <label>Display size</label>
+        <div class="radios">
+          <div class="radio" data-value="mobile">Mobile</div>
+          <div class="radio" data-value="desktop">Desktop</div>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <label class="upload-label">
+            <input id="bgUpload" type="file" accept="image/*" style="display:none"> 
+            <span style="cursor:pointer;color:var(--muted)">Upload background</span>
+          </label>
+        </div>
+        <button id="page1Confirm" class="btn">Confirm →</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="page2" class="app" style="display:none">
+    <div class="header">
+      <div class="left-circle" id="openPanel" title="Open settings">
+        <img src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32'><circle cx='16' cy='16' r='14' fill='%239ca3af'/></svg>" alt="menu" />
+      </div>
+      <div class="search-wrap">
+        <input id="search" class="search-input" placeholder="Search songs, e.g. " />
+        <div id="results" class="results" style="display:none"></div>
+      </div>
+      <div style="min-width:120px;text-align:right;color:var(--muted)">
+        <div id="displayBadge">Display: —</div>
+        <div id="usernameBadge" style="font-weight:600"></div>
+      </div>
+    </div>
+
+    <!-- Category Grid View -->
+    <div id="categoryView">
+      <div id="tiles" class="grid"></div>
+      <div class="controls">
+        <button id="refreshBtn" class="btn">Refresh (placeholder)</button>
+        <div class="small">Tip: this frontend will later call your Flask API with <code>fetch()</code>.</div>
+      </div>
+    </div>
+
+    <!-- Song List View (hidden by default) -->
+    <div id="songListView" style="display:none;">
+      <div class="song-list-header">
+        <button id="backToCategoriesBtn" class="btn">← Back</button>
+        <h3 id="songListCategoryTitle"></h3>
+      </div>
+      <div id="songsForCategory">
+        <!-- Songs will be rendered here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel / modal -->
+  <div id="overlay" class="overlay">
+    <div class="panel">
+      <h3>Profile & Theme</h3>
+      <p class="small">Username: <strong id="panelUsername">—</strong></p>
+      <p class="small">Display size: <strong id="panelDisplay">—</strong></p>
+      <div style="margin-top:10px">
+        <button id="changeDisplayBtn" class="btn">Change Display Size</button>
+      </div>
+
+      <hr style="margin:12px 0">
+      <p class="small">Choose Theme</p>
+      <div class="theme-list" id="themeList"></div>
+      <div style="margin-top:10px" class="small">You can also upload a photo on the first page to use as a background.</div>
+      <div style="margin-top:12px;text-align:right">
+        <button id="closePanel" class="btn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    
+    const refreshBtn = document.getElementById('refreshBtn');
+
+    // --- Theme definitions ---
+    const THEMES = {
+      default: {accent:'#9ca3af', bg:'#f3f4f6', card:'#ffffff'},
+      red: {accent:'#ef4444'}, // 活力
+      orange: {accent:'#fb923c'}, // 温暖
+      yellow: {accent:'#f59e0b'}, // 欢快
+      green: {accent:'#10b981'}, // 平静
+      blue: {accent:'#3b82f6'}, // 抑郁 (blue)
+      purple: {accent:'#8b5cf6'}, // 梦幻
+      white: {accent:'#ffffff'}, // 纯粹
+      black: {accent:'#111827'}, // 压抑
+      pink: {accent:'#f472b6'} // 柔美
+    }
+
+    // DOM elements
+    const page1 = document.getElementById('page1')
+    const page2 = document.getElementById('page2')
+    const usernameInp = document.getElementById('usernameInp')
+    const page1Confirm = document.getElementById('page1Confirm')
+    const displayBadge = document.getElementById('displayBadge')
+    const usernameBadge = document.getElementById('usernameBadge')
+    const tiles = document.getElementById('tiles')
+    const search = document.getElementById('search')
+    const results = document.getElementById('results')
+    const overlay = document.getElementById('overlay')
+    const openPanel = document.getElementById('openPanel')
+    const closePanel = document.getElementById('closePanel')
+    const panelUsername = document.getElementById('panelUsername')
+    const panelDisplay = document.getElementById('panelDisplay')
+    const changeDisplayBtn = document.getElementById('changeDisplayBtn')
+    const themeList = document.getElementById('themeList')
+    const bgUpload = document.getElementById('bgUpload')
+
+    // New DOM elements for song list view
+    const categoryView = document.getElementById('categoryView')
+    const songListView = document.getElementById('songListView')
+    const backToCategoriesBtn = document.getElementById('backToCategoriesBtn')
+    const songListCategoryTitle = document.getElementById('songListCategoryTitle')
+    const songsForCategory = document.getElementById('songsForCategory')
+
+
+    // State
+    let state = {
+      username: localStorage.getItem('mini_username') || '',
+      display: localStorage.getItem('mini_display') || 'desktop',
+      theme: localStorage.getItem('mini_theme') || 'default',
+      bgDataUrl: localStorage.getItem('mini_bg') || null
+    }
+
+    // Initialize first page radios
+    document.querySelectorAll('.radio').forEach(r=>{
+      if(r.dataset.value === state.display) r.style.border = '2px solid rgba(0,0,0,0.12)'
+      r.addEventListener('click', ()=>{
+        document.querySelectorAll('.radio').forEach(x=>x.style.border='1px solid rgba(0,0,0,0.06)')
+        r.style.border='2px solid rgba(0,0,0,0.12)'
+        state.display = r.dataset.value
+      })
+    })
+
+    // load bg upload
+    bgUpload.addEventListener('change', (e)=>{
+      const f = e.target.files[0]
+      if(!f) return
+      const reader = new FileReader()
+      reader.onload = ()=>{
+        state.bgDataUrl = reader.result
+        document.body.style.background = `url(${state.bgDataUrl}) center/cover fixed, linear-gradient(180deg,var(--bg),#efefef)`
+        localStorage.setItem('mini_bg', state.bgDataUrl)
+      }
+      reader.readAsDataURL(f)
+    })
+
+    // Confirm button -> go to page2
+    page1Confirm.addEventListener('click', ()=>{
+      const name = usernameInp.value.trim()
+      if(!name){alert('Please enter a username');usernameInp.focus();return}
+      state.username = name
+      localStorage.setItem('mini_username', state.username)
+      localStorage.setItem('mini_display', state.display)
+      showPage2()
+      // fetchCategories(); // moved inside showPage2
+    })
+
+    function showPage2(){
+      page1.style.display='none'
+      page2.style.display='block'
+      usernameBadge.textContent = state.username
+      displayBadge.textContent = `Display: ${state.display}`
+      panelUsername.textContent = state.username
+      panelDisplay.textContent = state.display
+      applyTheme(state.theme)
+      fetchCategories() 
+      categoryView.style.display = 'block';
+      songListView.style.display = 'none';
+    }
+
+async function fetchCategories() {
+  try {
+    const res = await fetch('/api/categories');
+    if (res.status === 401) { window.location.href = '/login'; return; }
+    const data = await res.json();
+    renderTiles(data);
+  } catch (err) {
+    console.error("Error fetching categories:", err);
+  }
+}
+
+const EMOJIS = {
+  happy: "😄",
+  chill: "😎",
+  sad: "😢",
+  love: "❤️",
+  study: "📚",
+  motivational: "💪",
+  korean: "🎵",
+  chinese: "🥢",
+  japanese: "🍣"
+};
+
+function renderTiles(categories) {
+  const container = document.getElementById("tiles");
+  container.innerHTML = "";
+  const columns = state.display === 'mobile' ? 2 : 6;
+  container.style.gridTemplateColumns = `repeat(${columns}, 1fr)`;
+  const accent = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+  categories.forEach(cat => {
+    const div = document.createElement("div");
+    div.className = "tile";
+    div.innerHTML = `<h4>${EMOJIS[cat] || "🎵"} ${cat[0].toUpperCase() + cat.slice(1)}</h4>`;
+    div.style.setProperty('--tile-bg', accent);
+    div.addEventListener("click", () => fetchCategorySongs(cat));      
+    container.appendChild(div);
+  });
+}
+
+async function fetchCategorySongs(category) {
+  try {
+    const res = await fetch(`/api/category/${category}`);
+    if (res.status === 401) { window.location.href = '/login'; return; }
+    const songs = await res.json();
+    showSongsForCategory(category, songs);
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+document.getElementById("refreshBtn").addEventListener("click", fetchCategories);
+
+    function showSongsForCategory(categoryName, songs) {
+      categoryView.style.display = 'none';
+      songListView.style.display = 'block';
+      songListCategoryTitle.textContent = categoryName;
+      songsForCategory.innerHTML = ''; 
+
+      if (!songs || songs.length === 0) {
+        songsForCategory.innerHTML = `<div class="no-results" style="margin-top:20px;">No songs found in this category.</div>`;
+        return;
+      }
+
+      songs.forEach(song => {
+        const songItem = document.createElement('div');
+        songItem.className = 'song-item';
+
+        let audioHtml = '';
+        if (song.preview) {
+          audioHtml = `<audio controls style="width:100%; margin-top:5px;" src="${song.preview}"></audio>`;
+        }        
+        
+        songItem.innerHTML = `
+          <div class="song-item-cover">${song.title[0]}</div>
+          <div class="song-item-details">
+            <div class="song-title">${song.title}</div>
+            <div class="song-artist">${song.artist}</div>
+            ${audioHtml} 
+          </div>
+        `;
+
+        const embedPlayer = document.createElement('iframe');
+        embedPlayer.src = `https://open.spotify.com/embed/track/${song.id}`;
+        embedPlayer.width = "300";
+        embedPlayer.height = "80";
+        embedPlayer.frameBorder = "0";
+        embedPlayer.allowTransparency = true;
+        embedPlayer.allow = "encrypted-media";
+        embedPlayer.style.marginTop = "5px";
+
+        songItem.querySelector('.song-item-details').appendChild(embedPlayer);
+
+        songsForCategory.appendChild(songItem);
+      });
+      
+      songsForCategory.addEventListener('play', function(e){
+        const audios = songsForCategory.querySelectorAll('audio');
+        audios.forEach(audio => {
+          if(audio !== e.target) audio.pause();
+        });
+      }, true);
+    }    
+
+    // Back button listener
+    backToCategoriesBtn.addEventListener('click', () => {
+      songListView.style.display = 'none';
+      categoryView.style.display = 'block';
+    });
+
+
+    // Panel open/close
+    openPanel.addEventListener('click', ()=>{overlay.style.display='flex'})
+    closePanel.addEventListener('click', ()=>{overlay.style.display='none'})
+    overlay.addEventListener('click',(e)=>{ if(e.target===overlay) overlay.style.display='none' })
+
+    changeDisplayBtn.addEventListener('click', ()=>{
+      // go back to page1 to change display size
+      overlay.style.display='none'
+      page2.style.display='none'
+      page1.style.display='flex'
+      usernameInp.value = state.username
+      // highlight the correct radio
+      document.querySelectorAll('.radio').forEach(x=>{x.style.border = x.dataset.value===state.display? '2px solid rgba(0,0,0,0.12)' : '1px solid rgba(0,0,0,0.06)'})
+    })
+
+    // Theme rendering in panel
+    function buildThemeList(){
+      themeList.innerHTML=''
+      Object.keys(THEMES).forEach(key=>{
+        const dot = document.createElement('div')
+        dot.className='theme-dot'
+        dot.title=key
+        dot.style.background = THEMES[key].accent || '#9ca3af'
+        dot.textContent = key[0].toUpperCase()
+        dot.addEventListener('click', ()=>{ applyTheme(key); localStorage.setItem('mini_theme', key) })
+        themeList.appendChild(dot)
+      })
+    }
+
+    function applyTheme(key){
+      const t = THEMES[key] || THEMES['default']
+      const accent = t.accent || '#9ca3af';
+      document.documentElement.style.setProperty('--accent', accent);
+
+      if(t.bg) document.documentElement.style.setProperty('--bg', t.bg)
+      if(t.card) document.documentElement.style.setProperty('--card', t.card)
+      document.documentElement.style.setProperty('--muted', shadeColor(accent, 25))
+      state.theme = key
+      fetchCategories(); 
+    }
+
+    // Utility: slightly shade hex color to make muted color
+    function shadeColor(hex, percent) {
+      try{
+        const f = hex.slice(1), t=0, R=parseInt(f.substring(0,2),16), G=parseInt(f.substring(2,4),16), B=parseInt(f.substring(4,6),16);
+        const r = Math.round(R + (255-R)*percent/100), g=Math.round(G + (255-G)*percent/100), b=Math.round(B + (255-B)*percent/100);
+        return `rgb(${r},${g},${b})`;
+      }catch(e){return '#6b7280'}
+    }
+
+    let searchTimer = null
+    search.addEventListener('input', ()=>{
+      const q = search.value.trim().toLowerCase()
+      if(q==='') { results.style.display='none'; return }
+      // debounce
+      clearTimeout(searchTimer)
+      searchTimer = setTimeout(()=>{
+        fetch(`/api/search?q=${encodeURIComponent(q)}`)
+          .then(r => {
+            if (r.status === 401) { window.location.href = '/login'; return; }
+            return r.json();
+          })
+          .then(data => { if (data) renderResults(data) })
+          .catch(err => console.error(err))
+      },200)
+    })
+
+    function renderResults(list){
+      results.style.display='block'
+      results.innerHTML=''
+      if(!list || list.length===0){ 
+        results.innerHTML = `<div class="no-results">No results.</div>`; 
+        return 
+      }
+
+      list.slice(0,30).forEach(item=>{
+        const d = document.createElement('div')
+        d.className='result-item'
+
+        let audioHTML = ''
+        if(item.preview){  
+          audioHTML = `<audio controls src="${item.preview}" style="margin-top:5px;width:200px"></audio>`;
+        }
+
+        d.innerHTML = `
+          <div style="width:42px;height:42px;border-radius:8px;background:linear-gradient(90deg,var(--accent),rgba(0,0,0,0.05));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700">
+            ${item.title[0]}
+          </div>
+          <div>
+            <div class="title">${item.title}</div>
+            <div class="small">${item.artist}</div>
+            ${audioHTML}
+          </div>
+        `;
+
+        const embedPlayer = document.createElement('iframe');
+        embedPlayer.src = `https://open.spotify.com/embed/track/${item.id}`;
+        embedPlayer.width = "300";
+        embedPlayer.height = "80";
+        embedPlayer.frameBorder = "0";
+        embedPlayer.allowTransparency = true;
+        embedPlayer.allow = "encrypted-media";
+        embedPlayer.style.marginTop = "5px";
+
+        d.querySelector('div:nth-child(2)').appendChild(embedPlayer);
+
+        results.appendChild(d)
+      })
+    }
+
+    // Build theme list and initial UI
+    buildThemeList()
+
+    page1.style.display = 'flex';
+    page2.style.display = 'none';
+    usernameInp.value = '';
+
+    // Save theme on unload
+    window.addEventListener('beforeunload', ()=>{ 
+      localStorage.setItem('mini_theme', state.theme); 
+      localStorage.setItem('mini_display', state.display) 
+    })
+
+    // Small UX: close results on click outside
+    document.addEventListener('click', (e) => {
+      if (!search.contains(e.target) && !results.contains(e.target)) {
+        results.style.display = 'none';
+      }
+    });  
+
+</script>
+</body>
+</html>
